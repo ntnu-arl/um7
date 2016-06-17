@@ -1,15 +1,15 @@
 <!-- Launch me -->
 <launch>
 
-	<node name="imu0" pkg="um7" type="um7_driver" output="screen">
-		<param name="port" value="/dev/ttyUSB0"/>
-		<param name="baud" value="115200"/>
-		<param name="frame_id" value="imu4"/>
-		<param name="proc_rate" value="240"/> <!--240mapsto200-->
-		<param name="mag_updates" value="false"/>
-		<param name="quat_mode" value="false"/>
-		<param name="zero_gyros" value="true"/>
-		<param name="covariance" value="99999.9 0 0 0 99999.9 0 0 0 99999.9"/>
-	</node>
+    <node name="imu0" pkg="um7" type="um7_driver" respawn="true" output="screen">
+	<param name="port" value="/dev/ttyUSB0"/>
+	<param name="baud" value="921600"/>
+	<param name="frame_id" value="imu0"/>
+	<param name="proc_rate" value="240"/>  <!--240mapsto200-->
+	<param name="mag_updates" value="false"/>
+	<param name="quat_mode" value="false"/>
+	<param name="zero_gyros" value="true"/>
+	<param name="covariance" value="99999.9 0 0 0 99999.9 0 0 0 99999.9"/>
+    </node>
 
 </launch>
