@@ -51,7 +51,9 @@ const char VERSION[10] = "0.0.2";   // um7_driver version
 
 // Don't try to be too clever. Arrival of this message triggers
 // us to publish everything we have.
-const uint8_t TRIGGER_PACKET = DREG_EULER_PHI_THETA;
+//const uint8_t TRIGGER_PACKET = DREG_EULER_PHI_THETA;
+//const uint8_t TRIGGER_PACKET = DREG_ACCEL_PROC_X;
+const uint8_t TRIGGER_PACKET = DREG_GYRO_PROC_X;
 
 /**
  * Function generalizes the process of writing an XYZ vector into consecutive
@@ -107,18 +109,26 @@ void configureSensor(um7::Comms* sensor)
 {
   um7::Registers r;
 
-    uint32_t comm_reg = (BAUD_115200 << COM_BAUD_START);
+    uint32_t comm_reg = (BAUD_921600/*BAUD_115200*/ << COM_BAUD_START);
     r.communication.set(0, comm_reg);
     if (!sensor->sendWaitAck(r.comrate2))
     {
       throw std::runtime_error("Unable to set CREG_COM_SETTINGS.");
     }
 
+/*
     uint32_t raw_rate = (20 << RATE2_ALL_RAW_START);
     r.comrate2.set(0, raw_rate);
     if (!sensor->sendWaitAck(r.comrate2))
     {
       throw std::runtime_error("Unable to set CREG_COM_RATES2.");
+    }
+
+    uint32_t procsep_rate = (120 << RATE3_PROC_ACCEL_START) | (120 << RATE3_PROC_GYRO_START) | (0 << RATE3_PROC_MAG_START);
+    r.comrate3.set(0, procsep_rate);
+    if (!sensor->sendWaitAck(r.comrate3))
+    {
+      throw std::runtime_error("Unable to set CREG_COM_RATES3.");
     }
 
     uint32_t proc_rate = (20 << RATE4_ALL_PROC_START);
@@ -127,21 +137,35 @@ void configureSensor(um7::Comms* sensor)
     {
       throw std::runtime_error("Unable to set CREG_COM_RATES4.");
     }
+*/
 
-    uint32_t misc_rate = (20 << RATE5_EULER_START) | (20 << RATE5_QUAT_START);
+    // Set processed data update rate .
+    int proc_rate;
+    ros::param::param<int>("~proc_rate", proc_rate, 240);
+    fprintf(stderr,"Um7:: setting Processed Data Rate to %d\n",proc_rate);
+    uint32_t procsep_rate = (proc_rate << RATE3_PROC_ACCEL_START) | (proc_rate << RATE3_PROC_GYRO_START) | (0 << RATE3_PROC_MAG_START);
+    r.comrate3.set(0, procsep_rate);
+    if (!sensor->sendWaitAck(r.comrate3))
+    {
+      throw std::runtime_error("Unable to set CREG_COM_RATES3.");
+    }
+
+
+    uint32_t misc_rate = (0 << RATE5_EULER_START) | (0 << RATE5_QUAT_START);
     r.comrate5.set(0, misc_rate);
     if (!sensor->sendWaitAck(r.comrate5))
     {
       throw std::runtime_error("Unable to set CREG_COM_RATES5.");
     }
 
+/*
     uint32_t health_rate = (5 << RATE6_HEALTH_START);  // note:  5 gives 2 hz rate
     r.comrate6.set(0, health_rate);
     if (!sensor->sendWaitAck(r.comrate6))
     {
       throw std::runtime_error("Unable to set CREG_COM_RATES6.");
     }
-
+*/
 
   // Options available using parameters)
   uint32_t misc_config_reg = 0;  // initialize all options off
@@ -198,11 +222,13 @@ bool handleResetService(um7::Comms* sensor,
  * the ROS messages which are output.
  */
 void publishMsgs(um7::Registers& r, ros::NodeHandle* n, const std_msgs::Header& header)
-{
-  static ros::Publisher imu_pub = n->advertise<sensor_msgs::Imu>("imu/data", 1, false);
+{ 
+  static std::string imu_pub_name = ros::this_node::getName();
+  static ros::Publisher imu_pub = n->advertise<sensor_msgs::Imu>(imu_pub_name, 1, false); //"imu0" or "/imu0"
+  /*static ros::Publisher imu_pub = n->advertise<sensor_msgs::Imu>("imu/data", 1, false);
   static ros::Publisher mag_pub = n->advertise<geometry_msgs::Vector3Stamped>("imu/mag", 1, false);
   static ros::Publisher rpy_pub = n->advertise<geometry_msgs::Vector3Stamped>("imu/rpy", 1, false);
-  static ros::Publisher temp_pub = n->advertise<std_msgs::Float32>("imu/temperature", 1, false);
+  static ros::Publisher temp_pub = n->advertise<std_msgs::Float32>("imu/temperature", 1, false);*/
 
   if (imu_pub.getNumSubscribers() > 0)
   {
@@ -210,10 +236,10 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* n, const std_msgs::Header& 
     imu_msg.header = header;
 
     // IMU outputs [w,x,y,z], convert to [x,y,z,w] & transform to ROS axes
-    imu_msg.orientation.x =  r.quat.get_scaled(1);
-    imu_msg.orientation.y = -r.quat.get_scaled(2);
-    imu_msg.orientation.z = -r.quat.get_scaled(3);
-    imu_msg.orientation.w = r.quat.get_scaled(0);
+    imu_msg.orientation.x = 0.0; //r.quat.get_scaled(1);
+    imu_msg.orientation.y = 0.0; //-r.quat.get_scaled(2);
+    imu_msg.orientation.z = 0.0; //-r.quat.get_scaled(3);
+    imu_msg.orientation.w = 1.0; //r.quat.get_scaled(0);
 
     // Covariance of attitude.  set to constant default or parameter values
     imu_msg.orientation_covariance[0] = covar[0];
@@ -227,18 +253,25 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* n, const std_msgs::Header& 
     imu_msg.orientation_covariance[8] = covar[8];
 
     // Angular velocity.  transform to ROS axes
-    imu_msg.angular_velocity.x =  r.gyro.get_scaled(0);
-    imu_msg.angular_velocity.y = -r.gyro.get_scaled(1);
+    //imu_msg.angular_velocity.x = r.gyro.get_scaled(0);
+    //imu_msg.angular_velocity.y = -r.gyro.get_scaled(1);
+    //imu_msg.angular_velocity.z = -r.gyro.get_scaled(2);
+    imu_msg.angular_velocity.x = -r.gyro.get_scaled(0);
+    imu_msg.angular_velocity.y = r.gyro.get_scaled(1);
     imu_msg.angular_velocity.z = -r.gyro.get_scaled(2);
 
     // Linear accel.  transform to ROS axes
-    imu_msg.linear_acceleration.x =  r.accel.get_scaled(0);
-    imu_msg.linear_acceleration.y = -r.accel.get_scaled(1);
+    //imu_msg.linear_acceleration.x =  r.accel.get_scaled(0);
+    //imu_msg.linear_acceleration.y = -r.accel.get_scaled(1);
+    //imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
+    imu_msg.linear_acceleration.x = -r.accel.get_scaled(0);
+    imu_msg.linear_acceleration.y = r.accel.get_scaled(1);
     imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
 
     imu_pub.publish(imu_msg);
   }
 
+/*
   // Magnetometer.  transform to ROS axes
   if (mag_pub.getNumSubscribers() > 0)
   {
@@ -268,6 +301,7 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* n, const std_msgs::Header& 
     temp_msg.data = r.temperature.get_scaled(0);
     temp_pub.publish(temp_msg);
   }
+*/
 }
 
 
@@ -341,6 +375,7 @@ int main(int argc, char **argv)
 
         while (ros::ok())
         {
+		//std::cout<<sensor.receive(&registers)<<std::endl; continue;
           // triggered by arrival of last message packet
           if (sensor.receive(&registers) == TRIGGER_PACKET)
           {
