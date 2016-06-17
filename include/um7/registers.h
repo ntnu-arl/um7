@@ -163,6 +163,7 @@ class Registers {
       temperature(this, DREG_TEMPERATURE, 1),
       communication(this, CREG_COM_SETTINGS, 1),
       comrate2(this, CREG_COM_RATES2, 1),
+	 comrate3(this, CREG_COM_RATES3, 1),
       comrate4(this, CREG_COM_RATES4, 1),
       comrate5(this, CREG_COM_RATES5, 1), 
       comrate6(this, CREG_COM_RATES6, 1),
@@ -182,7 +183,7 @@ class Registers {
     const Accessor<float> gyro, accel, mag, temperature;
 
     // Configs
-    const Accessor<uint32_t> communication, misc_config, status, comrate2,
+    const Accessor<uint32_t> communication, misc_config, status, comrate2, comrate3,
                             comrate4, comrate5, comrate6;
 
     const Accessor<float>  mag_bias;  
