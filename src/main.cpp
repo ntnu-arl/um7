@@ -46,6 +46,8 @@
 #include "um7/Reset.h"
 #include <string>
 
+uint16_t enuAxesOrder[3];
+int16_t enuAxesFix[3];     
 float covar[9];     // orientation covariance values
 const char VERSION[10] = "0.0.2";   // um7_driver version
 
@@ -252,21 +254,37 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* n, const std_msgs::Header& 
     imu_msg.orientation_covariance[7] = covar[7];
     imu_msg.orientation_covariance[8] = covar[8];
 
+    //!!!---1st version of sensor & calibration---!!!//
     // Angular velocity.  transform to ROS axes
     //imu_msg.angular_velocity.x = r.gyro.get_scaled(0);
     //imu_msg.angular_velocity.y = -r.gyro.get_scaled(1);
     //imu_msg.angular_velocity.z = -r.gyro.get_scaled(2);
-    imu_msg.angular_velocity.x = -r.gyro.get_scaled(0);
-    imu_msg.angular_velocity.y = r.gyro.get_scaled(1);
-    imu_msg.angular_velocity.z = -r.gyro.get_scaled(2);
-
     // Linear accel.  transform to ROS axes
     //imu_msg.linear_acceleration.x =  r.accel.get_scaled(0);
     //imu_msg.linear_acceleration.y = -r.accel.get_scaled(1);
     //imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
-    imu_msg.linear_acceleration.x = -r.accel.get_scaled(0);
-    imu_msg.linear_acceleration.y = r.accel.get_scaled(1);
-    imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
+   
+    //!!!---2nd version of sensor & calibration---!!!//
+    // Angular velocity.  transform to ROS axes
+    //imu_msg.angular_velocity.x = -r.gyro.get_scaled(0);
+    //imu_msg.angular_velocity.y = r.gyro.get_scaled(1);
+    //imu_msg.angular_velocity.z = -r.gyro.get_scaled(2);
+    // Linear accel.  transform to ROS axes
+    //imu_msg.linear_acceleration.x = -r.accel.get_scaled(0);
+    //imu_msg.linear_acceleration.y = r.accel.get_scaled(1);
+    //imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
+
+    //!!!---3rd version of sensor & calibration---!!!//
+    static uint16_t x_ord = enuAxesOrder[0], y_ord = enuAxesOrder[1], z_ord = enuAxesOrder[2];
+    static int16_t x_sign = -enuAxesFix[0], y_sign = enuAxesFix[1], z_sign = -enuAxesFix[2];
+    // Angular velocity.  transform to ROS axes
+    imu_msg.angular_velocity.x = r.gyro.get_scaled(x_ord)*x_sign; 
+    imu_msg.angular_velocity.y = r.gyro.get_scaled(y_ord)*y_sign; 
+    imu_msg.angular_velocity.z = r.gyro.get_scaled(z_ord)*z_sign; 
+    // Linear accel.  transform to ROS axes
+    imu_msg.linear_acceleration.x = r.accel.get_scaled(x_ord)*x_sign;
+    imu_msg.linear_acceleration.y = r.accel.get_scaled(y_ord)*y_sign;
+    imu_msg.linear_acceleration.z = r.accel.get_scaled(z_ord)*z_sign;    
 
     imu_pub.publish(imu_msg);
   }
@@ -334,20 +352,49 @@ int main(int argc, char **argv)
   //   "covariance unknown" as advised in sensor_msgs/Imu.h.
   // This param allows the user to specify alternate covariance values if needed.
 
+  std::string enu_axes_order;
+  std::string enu_axes_fix;
   std::string covariance;
+  char enu_ord_c[200];
+  char enu_fix_c[200];
   char cov[200];
-  char *ptr1;
+  char *ord_ptr1;
+  char *fix_ptr1;
+  char *cov_ptr1;
 
+  ros::param::param<std::string>("~enu_axes_order", enu_axes_order, "0 1 2");
+  snprintf(enu_ord_c, sizeof(enu_ord_c), "%s", enu_axes_order.c_str());
+  ros::param::param<std::string>("~enu_axes_fix", enu_axes_fix, "1 1 1");
+  snprintf(enu_fix_c, sizeof(enu_fix_c), "%s", enu_axes_fix.c_str());
   ros::param::param<std::string>("~covariance", covariance, "0 0 0 0 0 0 0 0 0");
   snprintf(cov, sizeof(cov), "%s", covariance.c_str());
 
-  char* p = strtok_r(cov, " ", &ptr1);           // point to first value
+  char* cov_p = strtok_r(cov, " ", &cov_ptr1);           // point to first value
   for (int iter = 0; iter < 9; iter++)
   {
-    if (p) covar[iter] = atof(p);                // covar[] is global var
+    if (cov_p) covar[iter] = atof(cov_p);                // covar[] is global var
     else  covar[iter] = 0.0;
-    p = strtok_r(NULL, " ", &ptr1);              // point to next value (nil if none)
+    cov_p = strtok_r(NULL, " ", &cov_ptr1);              // point to next value (nil if none)
   }
+  //std::cout<<"\t\t\t"<<covar[0]<<","<<covar[1]<<","<<covar[2]<<","<<covar[3]<<std::endl;
+
+  char* ord_p = strtok_r(enu_ord_c, " ", &ord_ptr1); 
+  for (int iter = 0; iter < 9; iter++)
+  {
+    if (ord_p) enuAxesOrder[iter] = atoi(ord_p); 
+    else  enuAxesOrder[iter] = 0;
+    ord_p = strtok_r(NULL, " ", &ord_ptr1); 
+  }
+  //std::cout<<"\t\t\t"<<enuAxesOrder[0]<<","<<enuAxesOrder[1]<<","<<enuAxesOrder[2]<<std::endl;
+
+  char* fix_p = strtok_r(enu_fix_c, " ", &fix_ptr1);
+  for (int iter = 0; iter < 9; iter++)
+  {
+    if (fix_p) enuAxesFix[iter] = atoi(fix_p); 
+    else  enuAxesFix[iter] = 0;
+    fix_p = strtok_r(NULL, " ", &fix_ptr1); 
+  }
+  //std::cout<<"\t\t\t"<<enuAxesFix[0]<<","<<enuAxesFix[1]<<","<<enuAxesFix[2]<<std::endl;
 
   // Real Time Loop
   bool first_failure = true;

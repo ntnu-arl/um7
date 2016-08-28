@@ -10,6 +10,8 @@
 	<param name="quat_mode" value="false"/>
 	<param name="zero_gyros" value="true"/>
 	<param name="covariance" value="99999.9 0 0 0 99999.9 0 0 0 99999.9"/>
+	<param name="enu_axes_order" value="0 1 2"/>
+	<param name="enu_axes_fix" value="1 1 1"/>
     </node>
 
 </launch>
