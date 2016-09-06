@@ -275,16 +275,17 @@ void publishMsgs(um7::Registers& r, ros::NodeHandle* n, const std_msgs::Header& 
     //imu_msg.linear_acceleration.z = -r.accel.get_scaled(2);
 
     //!!!---3rd version of sensor & calibration---!!!//
+    //TODO: Indexing based on parameters does not work on some gcc versions. Why? Fix parameter-based approach for now... :TODO// 
     static uint16_t x_ord = enuAxesOrder[0], y_ord = enuAxesOrder[1], z_ord = enuAxesOrder[2];
     static int16_t x_sign = -enuAxesFix[0], y_sign = enuAxesFix[1], z_sign = -enuAxesFix[2];
     // Angular velocity.  transform to ROS axes
-    imu_msg.angular_velocity.x = r.gyro.get_scaled(x_ord)*x_sign; 
-    imu_msg.angular_velocity.y = r.gyro.get_scaled(y_ord)*y_sign; 
-    imu_msg.angular_velocity.z = r.gyro.get_scaled(z_ord)*z_sign; 
+    imu_msg.angular_velocity.x = -r.gyro.get_scaled(0); //r.gyro.get_scaled(x_ord)*x_sign; 
+    imu_msg.angular_velocity.y = -r.gyro.get_scaled(1); //r.gyro.get_scaled(y_ord)*y_sign; 
+    imu_msg.angular_velocity.z = r.gyro.get_scaled(2); //r.gyro.get_scaled(z_ord)*z_sign; 
     // Linear accel.  transform to ROS axes
-    imu_msg.linear_acceleration.x = r.accel.get_scaled(x_ord)*x_sign;
-    imu_msg.linear_acceleration.y = r.accel.get_scaled(y_ord)*y_sign;
-    imu_msg.linear_acceleration.z = r.accel.get_scaled(z_ord)*z_sign;    
+    imu_msg.linear_acceleration.x = -r.accel.get_scaled(0); //r.accel.get_scaled(x_ord)*x_sign;
+    imu_msg.linear_acceleration.y = -r.accel.get_scaled(1); //r.accel.get_scaled(y_ord)*y_sign;
+    imu_msg.linear_acceleration.z = r.accel.get_scaled(2); //r.accel.get_scaled(z_ord)*z_sign;    
 
     imu_pub.publish(imu_msg);
   }
