@@ -5,7 +5,7 @@
 	<param name="port" value="/dev/ttyUSB0"/>
 	<param name="baud" value="921600"/>
 	<param name="frame_id" value="imu0"/>
-	<param name="proc_rate" value="240"/>  <!--240mapsto200-->
+	<param name="proc_rate" value="54"/>  <!--240mapsto200, 113mapsto100-->
 	<param name="mag_updates" value="false"/>
 	<param name="quat_mode" value="false"/>
 	<param name="zero_gyros" value="true"/>
