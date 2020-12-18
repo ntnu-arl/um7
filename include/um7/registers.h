@@ -157,7 +157,8 @@ class Registers {
       mag_raw(this, DREG_MAG_RAW_XY, 3),
       gyro(this, DREG_GYRO_PROC_X, 3, 1.0 * TO_RADIANS),
       //accel(this, DREG_ACCEL_PROC_X, 3, 9.80665),     
-      accel(this, DREG_ACCEL_PROC_X, 3, 10.160562), // at static, magnitude of acc ~ 9.4... m/s^2 => scale to 9.81 m/s^2              
+      //accel(this, DREG_ACCEL_PROC_X, 3, 10.160562), // at static, magnitude of acc ~ 9.4... m/s^2 => scale to 9.81 m/s^2              
+      accel(this, DREG_ACCEL_PROC_X, 3, 10.012),
       mag(this, DREG_MAG_PROC_X, 3,1.0),
       euler(this, DREG_EULER_PHI_THETA, 3, 0.0109863 * TO_RADIANS),
       quat(this, DREG_QUAT_AB, 4, 0.0000335693),
